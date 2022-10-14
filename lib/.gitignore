@@ -1,2 +1,7 @@
 node_modules
 dist
+
+# Output directories when running cli script
+.cache
+files
+tables

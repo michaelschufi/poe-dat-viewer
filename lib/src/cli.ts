@@ -11,16 +11,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as https from 'https'
 import { spawn } from 'child_process'
-
-interface ExportConfig {
-  patch: string
-  files: string[]
-  translations?: string[]
-  tables: Array<{
-    name: string
-    columns: string[]
-  }>
-}
+import { config } from './config.js'
 
 const BUNDLE_CACHE = new Map<string, ArrayBuffer>()
 let PATCH_VER: string
@@ -61,7 +52,6 @@ const SPRITE_LISTS = [{
 let schema: SchemaFile
 
 ;(async function main () {
-  const config = require(path.join(process.cwd(), '/config.json')) as ExportConfig
   PATCH_VER = config.patch
   console.log(`Loaded config.json, patch version is '${PATCH_VER}'`)
 
@@ -186,14 +176,19 @@ export function exportAllRows (headers: NamedHeader[], datFile: DatFile) {
 async function loadIndex () {
   console.log('Loading bundles index...')
 
-  const indexBin = await fetchFile('_.index.bin')
-  const indexBundle = await decompressSliceInBundle(new Uint8Array(indexBin))
-  const _index = readIndexBundle(indexBundle)
-  INDEX = {
-    bundlesInfo: _index.bundlesInfo,
-    filesInfo: _index.filesInfo,
-    dirsInfo: _index.dirsInfo,
-    pathReps: await decompressSliceInBundle(_index.pathRepsBundle)
+  try {
+    const indexBin = await fetchFile('_.index.bin')
+    const indexBundle = await decompressSliceInBundle(new Uint8Array(indexBin))
+    const _index = readIndexBundle(indexBundle)
+    INDEX = {
+      bundlesInfo: _index.bundlesInfo,
+      filesInfo: _index.filesInfo,
+      dirsInfo: _index.dirsInfo,
+      pathReps: await decompressSliceInBundle(_index.pathRepsBundle)
+    }
+  } catch (error) {
+    console.error(error);
+    
   }
 }
 
@@ -213,6 +208,7 @@ async function getFileContent (fullPath: string) {
 
   const location = getFileInfo(fullPath, INDEX.bundlesInfo, INDEX.filesInfo)
   const bundleBin = await fetchFile(location.bundle)
+
   return await decompressSliceInBundle(new Uint8Array(bundleBin), location.offset, location.size)
 }
 
@@ -234,6 +230,7 @@ async function fetchFile (name: string): Promise<ArrayBuffer> {
 
     const out = fs.createWriteStream(cachedFilePath)
     const webpath = `${PATCH_VER}/${BUNDLE_DIR}/${name}`
+
     const request = https.get(`https://poe-bundles.snos.workers.dev/${webpath}`, (response) => {
       if (response.statusCode !== 200) {
         fs.unlink(cachedFilePath, () => { reject(response) })

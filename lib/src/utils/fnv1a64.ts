@@ -1,7 +1,9 @@
-import * as fnv from 'fnv-plus'
+import fnv from "fnv-plus";
 
-export function fnv1a64 (data: string) {
-  const hashHex = fnv.fast1a64(data)
+export function fnv1a64(data: string) {
+  
+  // @ts-ignore
+  const hashHex = fnv.fast1a64(data) as string
   return [
     parseInt(hashHex.substr(14, 2), 16),
     parseInt(hashHex.substr(12, 2), 16),
